@@ -12,13 +12,13 @@ function makeCode() {
   return Math.random().toString(36).substring(2, 7).toUpperCase();
 }
 
-// 🌐 Serve frontend
+// 🌐 FRONTEND
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mafia Multiplayer</title>
+  <title>Mafia Game</title>
   <style>
     body { font-family: Arial; text-align: center; background:#111; color:white; }
     input, button { padding:10px; margin:5px; }
@@ -80,7 +80,6 @@ socket.on("roomCode", c => {
 socket.on("players", players => {
   document.getElementById("players").innerHTML =
     players.map(p => "<li>" + p.name + "</li>").join("");
-
   showActions(players);
 });
 
@@ -95,7 +94,6 @@ socket.on("phase", phase => {
 
 function showActions(players) {
   let html = "";
-
   players.forEach(p => {
     if (myRole === "Mafia") {
       html += "<button onclick=\\"kill('" + p.id + "')\\">Kill " + p.name + "</button>";
@@ -105,7 +103,6 @@ function showActions(players) {
     }
     html += "<button onclick=\\"vote('" + p.id + "')\\">Vote " + p.name + "</button>";
   });
-
   document.getElementById("actions").innerHTML = html;
 }
 
@@ -127,7 +124,7 @@ function vote(id) {
   `);
 });
 
-// 🔥 Multiplayer logic
+// 🎮 GAME LOGIC
 io.on("connection", (socket) => {
 
   socket.on("createRoom", ({ name, mafiaCount }) => {
@@ -184,7 +181,6 @@ io.on("connection", (socket) => {
   socket.on("nightAction", ({ code, type, target }) => {
     let room = rooms[code];
     if (!room) return;
-
     room.actions[type] = target;
   });
 
@@ -205,7 +201,7 @@ io.on("connection", (socket) => {
 
 });
 
-// 🔥 HOSTING FIX (IMPORTANT)
+// 🔥 PORT FIX (VERY IMPORTANT FOR HOSTING)
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
