@@ -18,29 +18,86 @@ app.get("/", (req, res) => {
 <html>
 <head>
 <title>Mafia Pro</title>
+
 <style>
-body { font-family: Arial; text-align:center; background:#111; color:white; }
+/* 🌈 ANIMATED BACKGROUND */
+body {
+  font-family: Arial;
+  text-align:center;
+  color:white;
+  margin:0;
+  height:100vh;
+  background: linear-gradient(-45deg, #000, #1a1a1a, #330000, #111);
+  background-size: 400% 400%;
+  animation: bg 10s infinite;
+}
 
-input,button { padding:10px; margin:5px; }
+@keyframes bg {
+  0% {background-position:0% 50%;}
+  50% {background-position:100% 50%;}
+  100% {background-position:0% 50%;}
+}
 
+/* INPUT + BUTTON */
+input {
+  padding:10px;
+  margin:5px;
+  border-radius:5px;
+  border:none;
+}
+
+button {
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  border-radius:5px;
+  background: crimson;
+  color:white;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover {
+  background: gold;
+  color:black;
+  transform: scale(1.1);
+}
+
+/* CARD */
 .card {
+  margin-top:20px;
   padding:20px;
   border:2px solid white;
   border-radius:10px;
-  margin-top:20px;
+  font-size:24px;
+  animation: pop 0.5s ease;
 }
 
+@keyframes pop {
+  from {transform:scale(0);}
+  to {transform:scale(1);}
+}
+
+/* HOST VIEW */
 .hostList li {
   margin:5px;
   padding:10px;
   border-radius:5px;
+  animation: fade 1s ease;
+}
+
+@keyframes fade {
+  from {opacity:0;}
+  to {opacity:1;}
 }
 
 .mafia { background:red; }
 .doctor { background:green; }
 .villager { background:gray; }
+
 </style>
 </head>
+
 <body>
 
 <h1>🎮 Mafia Pro</h1>
@@ -57,10 +114,11 @@ input,button { padding:10px; margin:5px; }
 <button onclick="start()">Start</button>
 
 <h2 id="code"></h2>
+
 <ul id="players"></ul>
 
 <div id="role"></div>
-<ul id="hostView"></ul>
+<ul id="hostView" class="hostList"></ul>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -185,32 +243,24 @@ io.on("connection", socket => {
 
     room.roles = {};
 
-    // Mafia
     for (let i = 0; i < room.mafiaCount; i++) {
       if (shuffled[i]) room.roles[shuffled[i].id] = "Mafia";
     }
 
-    // Doctor
     if (shuffled[room.mafiaCount]) {
       room.roles[shuffled[room.mafiaCount].id] = "Doctor";
     }
 
-    // Villager
     shuffled.forEach(p=>{
       if (!room.roles[p.id]) room.roles[p.id] = "Villager";
     });
 
-    // SEND ROLE TO PLAYERS
     room.players.forEach(p=>{
       io.to(p.id).emit("role", room.roles[p.id]);
     });
 
-    // SEND ALL ROLES TO HOST
     let list = room.players.map(p=>{
-      return {
-        name: p.name,
-        role: room.roles[p.id]
-      };
+      return { name: p.name, role: room.roles[p.id] };
     });
 
     io.to(room.host).emit("hostRoles", list);
