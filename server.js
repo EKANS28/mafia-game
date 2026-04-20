@@ -18,16 +18,31 @@ app.get("/", (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mafia Game</title>
+  <title>Mafia Role Card</title>
   <style>
-    body { font-family: Arial; text-align: center; background:#111; color:white; }
-    input, button { padding:10px; margin:5px; }
-    button { cursor:pointer; }
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: #111;
+      color: white;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+    }
+    .card {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 10px;
+      background: #222;
+      font-size: 25px;
+      border: 2px solid white;
+    }
   </style>
 </head>
 <body>
 
-<h1>🕵️ Mafia Game</h1>
+<h1>🎴 Mafia Role Card</h1>
 
 <input id="name" placeholder="Your name">
 <input id="room" placeholder="Room code">
@@ -40,18 +55,14 @@ app.get("/", (req, res) => {
 <button onclick="start()">Start Game</button>
 
 <h2 id="code"></h2>
-<h3 id="role"></h3>
-<h3 id="phase"></h3>
+<div id="role"></div>
 
 <ul id="players"></ul>
-
-<div id="actions"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
 let code = "";
-let myRole = "";
 
 function create() {
   socket.emit("createRoom", {
@@ -80,43 +91,15 @@ socket.on("roomCode", c => {
 socket.on("players", players => {
   document.getElementById("players").innerHTML =
     players.map(p => "<li>" + p.name + "</li>").join("");
-  showActions(players);
 });
 
 socket.on("role", role => {
-  myRole = role;
-  document.getElementById("role").innerText = "Role: " + role;
+  document.getElementById("role").innerHTML = \`
+    <div class="card">
+      🎴 Your Role: <b>\${role}</b>
+    </div>
+  \`;
 });
-
-socket.on("phase", phase => {
-  document.getElementById("phase").innerText = "Phase: " + phase;
-});
-
-function showActions(players) {
-  let html = "";
-  players.forEach(p => {
-    if (myRole === "Mafia") {
-      html += "<button onclick=\\"kill('" + p.id + "')\\">Kill " + p.name + "</button>";
-    }
-    if (myRole === "Doctor") {
-      html += "<button onclick=\\"save('" + p.id + "')\\">Save " + p.name + "</button>";
-    }
-    html += "<button onclick=\\"vote('" + p.id + "')\\">Vote " + p.name + "</button>";
-  });
-  document.getElementById("actions").innerHTML = html;
-}
-
-function kill(id) {
-  socket.emit("nightAction", { code, type: "kill", target: id });
-}
-
-function save(id) {
-  socket.emit("nightAction", { code, type: "save", target: id });
-}
-
-function vote(id) {
-  socket.emit("vote", { code, target: id });
-}
 </script>
 
 </body>
@@ -134,9 +117,7 @@ io.on("connection", (socket) => {
       host: socket.id,
       players: [],
       roles: {},
-      mafiaCount,
-      votes: {},
-      actions: {}
+      mafiaCount
     };
 
     socket.join(code);
@@ -161,47 +142,32 @@ io.on("connection", (socket) => {
 
     let shuffled = [...room.players].sort(() => Math.random() - 0.5);
 
+    // Assign Mafia
     for (let i = 0; i < room.mafiaCount; i++) {
       room.roles[shuffled[i].id] = "Mafia";
     }
 
-    room.roles[shuffled[room.mafiaCount].id] = "Doctor";
+    // Assign Doctor
+    if (shuffled.length > room.mafiaCount) {
+      room.roles[shuffled[room.mafiaCount].id] = "Doctor";
+    }
 
+    // Others Villager
     shuffled.forEach(p => {
-      if (!room.roles[p.id]) room.roles[p.id] = "Villager";
+      if (!room.roles[p.id]) {
+        room.roles[p.id] = "Villager";
+      }
     });
 
+    // Send role to each player
     room.players.forEach(p => {
       io.to(p.id).emit("role", room.roles[p.id]);
     });
-
-    io.to(code).emit("phase", "night");
-  });
-
-  socket.on("nightAction", ({ code, type, target }) => {
-    let room = rooms[code];
-    if (!room) return;
-    room.actions[type] = target;
-  });
-
-  socket.on("vote", ({ code, target }) => {
-    let room = rooms[code];
-    if (!room) return;
-
-    room.votes[target] = (room.votes[target] || 0) + 1;
-
-    if (room.votes[target] >= Math.ceil(room.players.length / 2)) {
-      room.players = room.players.filter(p => p.id !== target);
-      room.votes = {};
-
-      io.to(code).emit("players", room.players);
-      io.to(code).emit("phase", "night");
-    }
   });
 
 });
 
-// 🔥 PORT FIX (VERY IMPORTANT FOR HOSTING)
+// 🔥 PORT FIX
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
